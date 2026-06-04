@@ -1,0 +1,39 @@
+import mongoose from "mongoose";
+
+const pageSchema = new mongoose.Schema({
+    url: {
+        type: String,
+        required: true,
+        unique: true
+    },
+
+    title: {
+        type: String,
+        required: true
+    },
+
+    paragraphs: {
+        type: [String],
+        default: []
+    },
+
+    links: {
+        type: [String],
+        default: []
+    },
+
+    index: {
+        type: Map,
+        of: Number,
+        default: {}
+    },
+
+    crawledAt: {
+        type: Date,
+        default: Date.now
+    }
+}, {timestamps: true});
+
+const Page = mongoose.model("Page", pageSchema);
+
+export default Page;
