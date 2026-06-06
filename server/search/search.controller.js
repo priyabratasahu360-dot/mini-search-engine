@@ -1,4 +1,5 @@
 import { searchWebsitePages } from "./search.service.js";
+import { saveSearchQuery } from "./searchHistory.service.js";
 
 export const searchPages = async(req, res) => {
     try{
@@ -14,6 +15,7 @@ export const searchPages = async(req, res) => {
         const limit = Number(req.query.limit) || 10;
 
         const results = await searchWebsitePages(q, page, limit);
+        await saveSearchQuery(q);
 
         res.status(200).json({
             message: "searched result",
@@ -22,7 +24,7 @@ export const searchPages = async(req, res) => {
     }
     catch(error){
         console.log("Error in search controller", error);
-        re.status(500).json({
+        res.status(500).json({
             message: "Failed to search pages"
         })
     }

@@ -30,3 +30,10 @@ export const getSuggestions = async(query) => {
 
   return res.data;
 }
+
+
+export const getTrendingSearches = async() => {
+  const res = await axiosInstance.get("/search/trending");
+
+  return res.data;
+}
