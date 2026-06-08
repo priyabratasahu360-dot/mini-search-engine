@@ -17,6 +17,11 @@ const pageSchema = new mongoose.Schema({
         default: []
     },
 
+    description: {
+        type: String,
+        default: ""
+    },
+
     links: {
         type: [String],
         default: []
@@ -26,6 +31,16 @@ const pageSchema = new mongoose.Schema({
         type: Map,
         of: Number,
         default: {}
+    },
+    
+    favicon: {
+        type: String,
+        default: ""
+    },
+
+    siteName: {
+        type: String,
+        default: ""
     },
 
     crawledAt: {

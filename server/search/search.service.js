@@ -1,4 +1,5 @@
 import Page from "../models/page.model.js";
+import { generateSnippet } from "../utils/generateSnippet.js";
 
 export const searchWebsitePages = async(query, page = 1, limit = 10) => {
 
@@ -74,8 +75,6 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         ),
 
         results: paginatedResults.map((page) => {
-
-            
             const matchingParagraph = page.paragraphs.find((paragraph) => 
                 typeof paragraph === "string" && 
             terms.some(term => 
@@ -85,6 +84,9 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
             return {
                 url: page.url,
                 title: page.title,
+                description: page.description,
+                favicon: page.favicon,
+                siteName: page.siteName,
                 score: terms.reduce((total, term) => {
                     const tf = page.index.get(term) || 0;
 
@@ -96,7 +98,9 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                     
                     return total + score;
                 }, 0),
-                snippet: matchingParagraph ? matchingParagraph.slice(0, 300) : "No preview available"
+                snippet: matchingParagraph ? 
+                generateSnippet(matchingParagraph, terms)
+                 : "No preview available"
             }
         })
     }

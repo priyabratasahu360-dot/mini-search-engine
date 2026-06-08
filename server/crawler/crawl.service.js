@@ -43,9 +43,12 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 3) => 
         await Page.create({
             url,
             title: parsedData.title,
+            description: parsedData.description,
             paragraphs: parsedData.paragraphs,
             links: parsedData.links,
-            index
+            index,
+            favicon: parsedData.favicon,
+            siteName: parsedData.siteName
         });
 
         const limitedLinks = parsedData.links.slice(0, 20);

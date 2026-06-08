@@ -5,8 +5,9 @@ import {
   getTrendingSearches,
   searchPages,
 } from "../services/SearchApi";
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
-
+import { ArrowUpRight, Search, TrendingUp } from "lucide-react";
+import { SearchBar } from "../components/SearchBar";
+import { SearchResults } from "../components/SearchResults";
 export const SearchPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const [result, setResult] = useState(null);
@@ -16,6 +17,7 @@ export const SearchPage = () => {
   const [trending, setTrending] = useState([]);
 
   const debounceRef = useRef(null);
+  const latestQueryRef = useRef("");
 
   useEffect(() => {
     const fetchTrending = async () => {
@@ -47,17 +49,20 @@ export const SearchPage = () => {
   const handleInputChange = async (e) => {
     const value = e.target.value;
 
+    latestQueryRef.current = value;
+
     setSearchInput(value);
 
-    if (value.length < 2) {
+    
+    if (!value.trim()) {
+      clearTimeout(debounceRef.current);
+      setResult(null);
       setSuggestion([]);
+      latestQueryRef.current = "";
       return;
     }
 
-    if (!value.trim()) {
-      clearTimeout(debounceRef.current);
-
-      setResult(null);
+    if (value.length < 2) {
       setSuggestion([]);
       return;
     }
@@ -65,8 +70,12 @@ export const SearchPage = () => {
     clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(async () => {
+
       const data = await getSuggestions(value);
-      // console.log(data.suggestion);
+
+      if(latestQueryRef.current !== value){
+        return;
+      }
 
       setSuggestion(data.suggestion);
     }, 300);
@@ -91,107 +100,45 @@ export const SearchPage = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-800 text-white min-h-screen flex items-center">
-      <h1 className="font-bold text-4xl bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-900 self-center">
-        Search Engine
+    <div className="flex flex-col bg-black text-white min-h-screen flex items-center">
+      <h1 className="font-bold text-4xl bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-900 self-center mt-15">
+        Search...
       </h1>
 
-      <div className="w-full flex flex-col items-center">
-        <div className="relative w-full max-w-4xl">
-          <input
-            type="text"
-            placeholder="Search"
-            className="w-full flex-1 text-xl py-3 px-6 bg-black outline-none"
-            value={searchInput}
-            onChange={handleInputChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSearch();
-              }
-            }}
-          />
-          <button
-            className="bg-black text-white bg-gray-600 rounded-full p-2 absolute right-4 top-1/2 -translate-y-1/2"
-            onClick={handleSearch}
-          >
-            <Search className="size-5" />
-          </button>
-        </div>
-        {suggestion?.map((suggestion) => (
+      <div className="w-full flex flex-col items-center mt-10">
+        <SearchBar searchInput={searchInput} handleInputChange={handleInputChange} handleSearch={handleSearch}/>
+        {!result && suggestion.map((suggestion) => (
           <div
             key={suggestion}
-            onClick={() => setSearchInput(suggestion)}
-            className="w-full max-w-4xl bg-black flex px-4"
+            onClick={() => {
+              setSearchInput(suggestion);
+            }
+            }
+            className="w-full max-w-4xl bg-black flex items-center gap-3 px-4 mt-5"
           >
-            <p className="bg-black w-full my-1 opacity-70">{suggestion}</p>
-            <X />
+            <Search className="opacity-70 size-6 rounded-full bg-gray-700 p-1"/>
+            <p className="bg-black w-full opacity-70">{suggestion}</p>
+            <ArrowUpRight className="opacity-70"/>
           </div>
         ))}
 
         {!searchInput && trending.length > 0 && (
-          <div>
-            <h2>trending searches...</h2>
+          <div className="w-full max-w-4xl">
+            <h2 className="px-4 opacity-50 font-serif mt-5">Trending searches</h2>
             {trending.map((item) => (
               <div
                 key={item.query}
                 onClick={() => setSearchInput(item.query)}
-                className="w-full max-w-4xl bg-black flex px-4"
+                className="w-full max-w-4xl bg-black flex px-4 flex items-center gap-3"
               >
-                <p className="bg-black w-full my-1 opacity-70">{item.query}</p>
-                <X />
+                <TrendingUp className="opacity-70 size-6 rounded-full bg-gray-700 p-1"/>
+                <p className="bg-black w-full my-2 opacity-70">{item.query}</p>
               </div>
             ))}
           </div>
         )}
       </div>
-      <div>
-        {loading ? (
-          <p>Searching...</p>
-        ) : (
-          result?.results?.results?.map((item, index) => (
-            <div
-              key={index}
-              className="bg-black text-white opacity-90 p-2 flex flex-col"
-            >
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-gray-600 p-3 rounded-lg"
-              >
-                {item.url}
-              </a>
-              <h2 className="text-lg font-bold">{item.title}</h2>
-              <p className="text-sm opacity-70">{item.snippet}</p>
-            </div>
-          ))
-        )}
-        <div>
-          {result?.results?.results && (
-            <div className="flex justify-center items-center">
-              <button
-                onClick={previousPage}
-                className="bg-gray-600 p-2 m-2"
-                disabled={page === 1}
-              >
-                <ChevronLeft />
-              </button>
-              <div>
-                <span className="font-bold mx-4">
-                  Page {result?.results?.page} of {result?.results?.totalPages}
-                </span>
-              </div>
-              <button
-                onClick={nextPage}
-                className="bg-blue-600 p-2 m-2"
-                disabled={page >= result?.results?.totalPages}
-              >
-                <ChevronRight />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <SearchResults loading={loading} result={result} previousPage={previousPage} page={page} nextPage={nextPage} setSuggestion={setSuggestion}/>
     </div>
   );
 };

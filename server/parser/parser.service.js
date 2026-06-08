@@ -23,9 +23,16 @@ export const parseHTML = (html) => {
         }
     });
 
+    const favicon = $('link[rel="icon"]').attr("href") ||
+                    $('link[rel="shortcut icon"]').attr("href");
+
+    
+    const siteName = $('meta[property="og:site_name"]').attr("content");
     return{
         title,
         paragraphs,
-        links
+        links,
+        favicon,
+        siteName
     }
 }
