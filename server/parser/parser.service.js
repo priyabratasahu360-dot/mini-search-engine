@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 
-export const parseHTML = (html) => {
+export const parseHTML = (html, pageUrl) => {
     const $ = cheerio.load(html);
 
     const title = $("title").text();
@@ -13,6 +13,8 @@ export const parseHTML = (html) => {
             paragraphs.push(text);
         }
     });
+
+    const description = $('meta[name="description"]').attr("content") || "";
 
     const links = [];
     $("a").each((index, element) => {
@@ -27,10 +29,12 @@ export const parseHTML = (html) => {
                     $('link[rel="shortcut icon"]').attr("href");
 
     
-    const siteName = $('meta[property="og:site_name"]').attr("content");
+    const siteName = $('meta[property="og:site_name"]').attr("content") || 
+                     new URL(pageUrl).hostname;
     return{
         title,
         paragraphs,
+        description,
         links,
         favicon,
         siteName

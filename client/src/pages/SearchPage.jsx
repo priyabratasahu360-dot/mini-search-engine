@@ -39,7 +39,6 @@ export const SearchPage = () => {
       setSuggestion([]);
 
       const data = await searchPages(searchInput, page);
-      console.log(data);
       setResult(data);
     } finally {
       setLoading(false);
@@ -52,6 +51,7 @@ export const SearchPage = () => {
     latestQueryRef.current = value;
 
     setSearchInput(value);
+    setResult(null);
 
     
     if (!value.trim()) {
@@ -70,23 +70,35 @@ export const SearchPage = () => {
     clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(async () => {
+      try{
 
-      const data = await getSuggestions(value);
-
-      if(latestQueryRef.current !== value){
-        return;
+        
+        const data = await getSuggestions(value);
+        
+        if(latestQueryRef.current !== value){
+          return;
+        }
+        
+        setSuggestion(data.suggestion);
       }
-
-      setSuggestion(data.suggestion);
-    }, 300);
+      catch(error){
+        if(error.name === "CanceledError" || error.code === "ERR_CANCELED"){
+          return;
+        }
+        console.error(error);
+      }
+      }, 300);
   };
 
   const nextPage = async () => {
     const newPage = page + 1;
 
+    console.time("next-page");
+
     setPage(newPage);
 
     const data = await searchPages(searchInput, newPage);
+    console.timeEnd("next-page")
     setResult(data);
   };
 
@@ -110,8 +122,13 @@ export const SearchPage = () => {
         {!result && suggestion.map((suggestion) => (
           <div
             key={suggestion}
-            onClick={() => {
+            onClick={async() => {
               setSearchInput(suggestion);
+              setSuggestion([]);
+              setPage(1);
+              
+              const data = await searchPages(suggestion, 1);
+              setResult(data);
             }
             }
             className="w-full max-w-4xl bg-black flex items-center gap-3 px-4 mt-5"

@@ -5,9 +5,10 @@ import { createIndex } from "../indexer/index.service.js";
 import Page from "../models/page.model.js";
 import { normalizeUrl } from "./crawl.utils.js";
 import { enqueueUrl } from "./queue.service.js";
+import Suggestion from "../models/suggestion.model.js";
 
 
-export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 3) => {
+export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 5) => {
 
     //stop deep recursion
     if(depth > maxDepth){
@@ -16,16 +17,6 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 3) => 
     console.log(`crawling ${url}`)
     
     try{
-
-        const existingPage = await Page.findOne({url});
-        
-        if(existingPage){
-            return {
-                message: "Page already crawled",
-                page: existingPage
-            }
-        }
-        
         const res = await axios.get(url, {
             timeout: 5000,
 
@@ -36,11 +27,23 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 3) => 
         
         const html = res.data;
         
-        const parsedData = parseHTML(html);
+        const parsedData = parseHTML(html, url);
         
         const index = createIndex(parsedData);
+
+        const terms = Object.keys(index);
+
+        const operations = terms.map(term => ({
+            updateOne: {
+                filter: {term},
+                update: {$inc: {frequency: 1}},
+                upsert: true
+            }
+        }));
+
+        await Suggestion.bulkWrite(operations);
         
-        await Page.create({
+        await Page.findOneAndUpdate({url}, {
             url,
             title: parsedData.title,
             description: parsedData.description,
@@ -49,9 +52,9 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 3) => 
             index,
             favicon: parsedData.favicon,
             siteName: parsedData.siteName
-        });
+        }, {upsert: true});
 
-        const limitedLinks = parsedData.links.slice(0, 20);
+        const limitedLinks = parsedData.links.slice(0, 100);
 
         
         //recursively crawl link

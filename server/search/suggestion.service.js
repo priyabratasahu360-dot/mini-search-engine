@@ -1,20 +1,18 @@
-import Page from "../models/page.model.js";
+import Suggestion from "../models/suggestion.model.js";
 
 export const getSuggestion = async(query) => {
-    const pages = await Page.find();
 
-    const suggestions = new Set();
-
-    for(const page of pages){
-        const words =[...page.index.keys()];
-
-        for(const word of words){
-            if(word.startsWith(query.toLowerCase())){
-
-                suggestions.add(word);
-            }
-        }
+    if(query.length < 2){
+        return [];
     }
+    const suggestions = await Suggestion.find({
+        term: {
+            $regex: "^" + query.toLowerCase()
+        }
+    })
+    .sort({frequency: -1})
+    .limit(10)
+    .lean();
 
-    return [...suggestions].slice(0, 10);
+    return suggestions.map(s => s.term)
 }

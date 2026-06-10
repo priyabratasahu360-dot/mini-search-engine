@@ -19,8 +19,14 @@ app.use(cors({
 app.use("/api/crawl", crawlRoutes);
 app.use("/api/search", searchRoutes);
 
-app.listen(5000, () => {
-    console.log("Server running on port 5000");
+const port = process.env.PORT || 5000;
+
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
     connectDB();
-    startCrawlerWorker();
+    if(process.env.ENABLE_CRAWLER === "true"){
+        console.log("Crawler enabled");
+        startCrawlerWorker();
+    }
+    console.log("Crawler disabled");
 });

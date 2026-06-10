@@ -11,17 +11,22 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                       .filter(Boolean);
 
     const pages = await Page.find({
-        $or: terms.map(term => ({
-            [`index.${term}`]: {
-                $exists: true
-            }
-        }))
-    });
+        terms: {$in: terms}
+    }, {
+        url: 1,
+        title: 1,
+        description: 1,
+        favicon: 1,
+        siteName: 1,
+        index: 1
+    }).lean();
 
     const totalDocuments = await Page.countDocuments();
+    
 
     const idfMap = {};
 
+    
     for(const term of terms){
         const documentFrequency = await Page.countDocuments({
             [`index.${term}`]: {
@@ -39,8 +44,8 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         let scoreB = 0;
 
         for(const term of terms){
-            const tfA = a.index.get(term) || 0;
-            const tfB = b.index.get(term) || 0;
+            const tfA = a.index?.[term] || 0;
+            const tfB = b.index?.[term] || 0;
 
             let termScoreA = tfA * idfMap[term];
 
@@ -64,6 +69,22 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
     const paginatedResults = rankedResults.slice(
         skip,
         skip + limit
+    );
+
+    const pageIds = paginatedResults.map(p => p._id);
+
+    const pagesWithParagraphs = await Page.find({
+        _id: {$in: pageIds}
+    }, {
+        paragraphs: 1
+    }).lean();
+
+    // adding paragraphs to pages
+    const paragraphsMap = new Map(
+        pagesWithParagraphs.map(p => [
+            p._id.toString(),
+            p.paragraphs
+        ])
     )
 
     return {
@@ -75,11 +96,14 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         ),
 
         results: paginatedResults.map((page) => {
-            const matchingParagraph = page.paragraphs.find((paragraph) => 
+
+            const paragraphs = paragraphsMap.get(page._id.toString()) || [];
+
+            const matchingParagraph = paragraphs.find((paragraph) => 
                 typeof paragraph === "string" && 
             terms.some(term => 
                 paragraph.toLowerCase().includes(term)
-            )) || page.paragraphs[0];
+            )) || paragraphs[0];
             
             return {
                 url: page.url,
@@ -88,7 +112,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                 favicon: page.favicon,
                 siteName: page.siteName,
                 score: terms.reduce((total, term) => {
-                    const tf = page.index.get(term) || 0;
+                    const tf = page.index?.[term] || 0;
 
                     let score = tf * idfMap[term];
                     

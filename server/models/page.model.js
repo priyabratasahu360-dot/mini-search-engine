@@ -32,6 +32,12 @@ const pageSchema = new mongoose.Schema({
         of: Number,
         default: {}
     },
+
+    terms: {
+        type: [String],
+        default: [],
+        index: true
+    },
     
     favicon: {
         type: String,

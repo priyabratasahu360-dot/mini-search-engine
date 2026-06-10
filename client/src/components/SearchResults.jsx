@@ -16,26 +16,29 @@ export const SearchResults = ({
             key={index}
             className="bg-gray-900 text-white rounded-lg opacity-90 p-2 flex flex-col"
           >
-            <div className="flex">
+            <div className="flex gap-2 items-center mb-4">
+
             <img
               src={item.favicon}
               alt="favicon"
               className="size-8"
               />
-              <p>{item.siteName}</p>
-              </div>
+            <div className="flex flex-col">
+              <p className="text-lg">{item.siteName}</p>
             <a
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-gray-600 p-3 rounded-lg"
-            >
+              className="text-sm opacity-70"
+              >
               {item.url}
             </a>
+              </div>
+                </div>
             <h2 className="text-lg font-semibold text-blue-300 my-2">
               {item.title}
             </h2>
-            <p className="text-sm opacity-70">{item.snippet}</p>
+            <p className="text-sm opacity-70">{item.snippet ||item.description}</p>
           </div>
         ))
       )}
