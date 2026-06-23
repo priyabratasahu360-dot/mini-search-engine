@@ -50,6 +50,7 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 5) => 
             paragraphs: parsedData.paragraphs,
             links: parsedData.links,
             index,
+            terms,
             favicon: parsedData.favicon,
             siteName: parsedData.siteName
         }, {upsert: true});

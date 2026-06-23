@@ -1,5 +1,6 @@
 import Page from "../models/page.model.js";
 import { generateSnippet } from "../utils/generateSnippet.js";
+import { redisClient } from "../lib/redis.js";
 
 export const searchWebsitePages = async(query, page = 1, limit = 10) => {
 
@@ -9,6 +10,18 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                       .toLowerCase()
                       .split(/\s+/)
                       .filter(Boolean);
+
+    const cacheKey = `search: ${terms}: ${page}: ${limit}`;
+
+    const cachedResult = await redisClient.get(cacheKey);
+
+    if(cachedResult){
+        console.log("cached");
+
+        return JSON.parse(cachedResult);
+    }
+
+    console.log("cache missed");
 
     const pages = await Page.find({
         terms: {$in: terms}
@@ -87,7 +100,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         ])
     )
 
-    return {
+    const response = {
         total: rankedResults.length,
         page,
         limit,
@@ -128,4 +141,14 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
             }
         })
     }
+
+    await redisClient.set(
+        cacheKey,
+        JSON.stringify(response),
+        {
+            EX: 300 // expires in 300 seconds
+        }
+    )
+
+    return response;
 }
