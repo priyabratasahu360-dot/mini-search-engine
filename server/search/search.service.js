@@ -1,6 +1,8 @@
 import Page from "../models/page.model.js";
 import { generateSnippet } from "../utils/generateSnippet.js";
 import { redisClient } from "../lib/redis.js";
+import { correctTerm } from "../utils/correctTerm.js";
+import Suggestion from "../models/suggestion.model.js";
 
 export const searchWebsitePages = async(query, page = 1, limit = 10) => {
 
@@ -10,8 +12,19 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                       .toLowerCase()
                       .split(/\s+/)
                       .filter(Boolean);
+    const suggestions = await Suggestion.find(
+        {},
+        {
+            term: 1,
+            frequency: 1
+        }
+    ).lean();
 
-    const cacheKey = `search: ${terms}: ${page}: ${limit}`;
+    const validatedTerms = terms.map((term) => (
+        correctTerm(term, suggestions)
+    ));
+
+    const cacheKey = `search: ${query.toLowerCase()}: ${page}: ${limit}`;
 
     const cachedResult = await redisClient.get(cacheKey);
 
@@ -24,7 +37,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
     console.log("cache missed");
 
     const pages = await Page.find({
-        terms: {$in: terms}
+        terms: {$in: validatedTerms}
     }, {
         url: 1,
         title: 1,
@@ -40,7 +53,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
     const idfMap = {};
 
     
-    for(const term of terms){
+    for(const term of validatedTerms){
         const documentFrequency = await Page.countDocuments({
             [`index.${term}`]: {
                 $exists: true
@@ -56,7 +69,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         let scoreA = 0;
         let scoreB = 0;
 
-        for(const term of terms){
+        for(const term of validatedTerms){
             const tfA = a.index?.[term] || 0;
             const tfB = b.index?.[term] || 0;
 
@@ -99,8 +112,10 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
             p.paragraphs
         ])
     )
+    console.log(validatedTerms)
 
     const response = {
+        correctedQuery: validatedTerms,
         total: rankedResults.length,
         page,
         limit,
@@ -114,7 +129,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
 
             const matchingParagraph = paragraphs.find((paragraph) => 
                 typeof paragraph === "string" && 
-            terms.some(term => 
+            validatedTerms.some(term => 
                 paragraph.toLowerCase().includes(term)
             )) || paragraphs[0];
             
@@ -124,7 +139,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                 description: page.description,
                 favicon: page.favicon,
                 siteName: page.siteName,
-                score: terms.reduce((total, term) => {
+                score: validatedTerms.reduce((total, term) => {
                     const tf = page.index?.[term] || 0;
 
                     let score = tf * idfMap[term];
@@ -136,7 +151,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                     return total + score;
                 }, 0),
                 snippet: matchingParagraph ? 
-                generateSnippet(matchingParagraph, terms)
+                generateSnippet(matchingParagraph, validatedTerms)
                  : "No preview available"
             }
         })

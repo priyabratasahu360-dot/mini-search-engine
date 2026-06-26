@@ -40,6 +40,7 @@ export const SearchPage = () => {
 
       const data = await searchPages(searchInput, page);
       setResult(data);
+      console.log(result);
     } finally {
       setLoading(false);
     }
@@ -152,6 +153,22 @@ export const SearchPage = () => {
                 <p className="bg-black w-full my-2 opacity-70">{item.query}</p>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Wrong query correction*/}
+      <div className="w-full max-w-4xl flex my-4">
+        {result && (
+          <div className="flex gap-2 left-0">
+            <p className="text-lg font-serif">Showing results for</p>
+            <span className="text-blue-500 font-serif self-center text-lg underline font-bold">
+            {result?.results?.correctedQuery?.map((q, i) => (
+              <span key={i}>
+                {q}
+              </span>
+            ))}
+            </span>
           </div>
         )}
       </div>
