@@ -38,6 +38,10 @@ const pageSchema = new mongoose.Schema({
         default: [],
         index: true
     },
+    documentLength: {
+        type: Number,
+        default: 0
+    },
     
     favicon: {
         type: String,

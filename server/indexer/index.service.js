@@ -10,7 +10,7 @@ export const createIndex = (parsedData) => {
 
     const words = normalizedText.split(/\s+/);
 
-   
+   const documentLength = words.length;
 
     const index = {};
 
@@ -35,5 +35,5 @@ export const createIndex = (parsedData) => {
         }
     }
 
-    return index;
+    return {index, documentLength};
 }

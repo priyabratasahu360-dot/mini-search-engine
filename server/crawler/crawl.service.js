@@ -29,7 +29,7 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 5) => 
         
         const parsedData = parseHTML(html, url);
         
-        const index = createIndex(parsedData);
+        const {index, documentLength} = createIndex(parsedData);
 
         const terms = Object.keys(index);
 
@@ -51,6 +51,7 @@ export const crawlWebsite = async(url, allowedHost, depth = 0, maxDepth = 5) => 
             links: parsedData.links,
             index,
             terms,
+            documentLength,
             favicon: parsedData.favicon,
             siteName: parsedData.siteName
         }, {upsert: true});

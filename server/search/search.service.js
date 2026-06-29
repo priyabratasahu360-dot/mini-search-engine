@@ -3,6 +3,7 @@ import { generateSnippet } from "../utils/generateSnippet.js";
 import { redisClient } from "../lib/redis.js";
 import { correctTerm } from "../utils/correctTerm.js";
 import Suggestion from "../models/suggestion.model.js";
+import { calculateBM25 } from "../utils/calculateBM25.js";
 
 export const searchWebsitePages = async(query, page = 1, limit = 10) => {
 
@@ -44,12 +45,27 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         description: 1,
         favicon: 1,
         siteName: 1,
-        index: 1
+        index: 1,
+        documentLength: 1
     }).lean();
 
     const totalDocuments = await Page.countDocuments();
-    
 
+    const result = await Page.aggregate([
+        {
+            $group: {
+                _id: null,
+                avgDocumentLength: {
+                    $avg: "$documentLength"
+                }
+            }
+        }
+    ]);
+
+    const avgDocumentLength = result[0].avgDocumentLength;
+
+    // console.log(avgDocumentLength);
+    
     const idfMap = {};
 
     
@@ -63,33 +79,26 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         idfMap[term] = Math.log(totalDocuments / (documentFrequency || 1));
     }
 
-    // ranking
-
-    const rankedResults = pages.sort((a, b) => {
-        let scoreA = 0;
-        let scoreB = 0;
+    for(const page of pages){
+        let score = 0
 
         for(const term of validatedTerms){
-            const tfA = a.index?.[term] || 0;
-            const tfB = b.index?.[term] || 0;
-
-            let termScoreA = tfA * idfMap[term];
-
-            let termScoreB = tfB * idfMap[term];
-
-            if(a.title.toLowerCase().includes(term)){
-                termScoreA += 10;
+            let termScore = calculateBM25(page, term, avgDocumentLength, idfMap);
+              
+            if(page.title.toLowerCase().includes(term)){
+                termScore += 10;
             }
 
-            if(b.title.toLowerCase().includes(term)){
-                termScoreB += 10;
-            }
-
-            scoreA += termScoreA;
-            scoreB += termScoreB;
+            score += termScore
         }
 
-        return scoreB - scoreA;
+        page.score = score;
+    }
+
+
+    const rankedResults = pages.sort((a, b) => {
+
+        return b.score - a.score;
     });
 
     const paginatedResults = rankedResults.slice(
@@ -112,7 +121,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
             p.paragraphs
         ])
     )
-    console.log(validatedTerms)
+    // console.log(validatedTerms)
 
     const response = {
         correctedQuery: validatedTerms,
@@ -139,17 +148,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
                 description: page.description,
                 favicon: page.favicon,
                 siteName: page.siteName,
-                score: validatedTerms.reduce((total, term) => {
-                    const tf = page.index?.[term] || 0;
-
-                    let score = tf * idfMap[term];
-                    
-                    if(page.title.toLowerCase().includes(term)){
-                        score += 10
-                    }
-                    
-                    return total + score;
-                }, 0),
+                score: page.score,
                 snippet: matchingParagraph ? 
                 generateSnippet(matchingParagraph, validatedTerms)
                  : "No preview available"

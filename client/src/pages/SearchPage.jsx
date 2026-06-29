@@ -40,7 +40,7 @@ export const SearchPage = () => {
 
       const data = await searchPages(searchInput, page);
       setResult(data);
-      console.log(result);
+      // console.log(data);
     } finally {
       setLoading(false);
     }
@@ -94,12 +94,9 @@ export const SearchPage = () => {
   const nextPage = async () => {
     const newPage = page + 1;
 
-    console.time("next-page");
-
     setPage(newPage);
 
     const data = await searchPages(searchInput, newPage);
-    console.timeEnd("next-page")
     setResult(data);
   };
 
@@ -163,11 +160,9 @@ export const SearchPage = () => {
           <div className="flex gap-2 left-0">
             <p className="text-lg font-serif">Showing results for</p>
             <span className="text-blue-500 font-serif self-center text-lg underline font-bold">
-            {result?.results?.correctedQuery?.map((q, i) => (
-              <span key={i}>
-                {q}
+              <span>
+                {result?.results?.correctedQuery?.join(" ")}
               </span>
-            ))}
             </span>
           </div>
         )}
