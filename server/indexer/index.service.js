@@ -1,4 +1,5 @@
 import { STOP_WORDS } from "../utils/stopwords.js";
+import { tokenize } from "../utils/tokenize.js";
 
 export const createIndex = (parsedData) => {
     const text = [
@@ -6,34 +7,20 @@ export const createIndex = (parsedData) => {
         ...parsedData.paragraphs
     ].join(" ");
 
-    const normalizedText = text.toLowerCase();
-
-    const words = normalizedText.split(/\s+/);
-
-   const documentLength = words.length;
+   const tokens = tokenize(text)
 
     const index = {};
+    const positions = new Map();
 
-    for(const word of words){
-        const cleanedWord = word.replace(/[^a-z0-9]/g, "");
+    tokens.forEach((word, position) => {
+        index[word] = (index[word] || 0) + 1
 
-        if(!cleanedWord) continue;
-
-        if(STOP_WORDS.includes(cleanedWord)){
-        continue;
+        if(!positions.has(word)){
+            positions.set(word, []);
         }
 
-        if(cleanedWord.length < 2){
-            continue;
-        }
+        positions.get(word).push(position);
+    })
 
-        if(index[cleanedWord]){
-            index[cleanedWord] += 1;
-        }
-        else{
-            index[cleanedWord] = 1;
-        }
-    }
-
-    return {index, documentLength};
+    return {index,positions, documentLength: tokens.length};
 }

@@ -33,6 +33,11 @@ const pageSchema = new mongoose.Schema({
         default: {}
     },
 
+    positions: {
+        type: Map,
+        of: [Number]
+    },
+
     terms: {
         type: [String],
         default: [],

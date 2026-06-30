@@ -4,6 +4,7 @@ import { redisClient } from "../lib/redis.js";
 import { correctTerm } from "../utils/correctTerm.js";
 import Suggestion from "../models/suggestion.model.js";
 import { calculateBM25 } from "../utils/calculateBM25.js";
+import { hasPhrase } from "../utils/hasPhrase.js";
 
 export const searchWebsitePages = async(query, page = 1, limit = 10) => {
 
@@ -46,6 +47,7 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
         favicon: 1,
         siteName: 1,
         index: 1,
+        positions: 1,
         documentLength: 1
     }).lean();
 
@@ -90,6 +92,10 @@ export const searchWebsitePages = async(query, page = 1, limit = 10) => {
             }
 
             score += termScore
+        }
+
+        if(hasPhrase(page.positions, validatedTerms)){
+            score += 20
         }
 
         page.score = score;
